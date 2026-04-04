@@ -1,0 +1,80 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "A user of the platform (KT Aivle student)",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "track": { "type": "string", "enum": ["DX", "AI"], "description": "The track the student belongs to" },
+        "score": { "type": "number", "description": "Ranking score" },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["uid", "displayName", "email", "track", "score", "createdAt"]
+    },
+    "IdeaCard": {
+      "title": "Idea Card",
+      "description": "An idea posted by a DX track student",
+      "type": "object",
+      "properties": {
+        "authorId": { "type": "string", "description": "UID of the DX student" },
+        "authorName": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["open", "matched"], "description": "Status of the idea" },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["authorId", "authorName", "title", "description", "status", "createdAt"]
+    },
+    "StudyGroup": {
+      "title": "Study Group",
+      "description": "A group of up to 5 students working on an idea",
+      "type": "object",
+      "properties": {
+        "ideaId": { "type": "string" },
+        "ideaTitle": { "type": "string" },
+        "members": { 
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Array of user UIDs"
+        },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["ideaId", "ideaTitle", "members", "createdAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A chat message in a study group",
+      "type": "object",
+      "properties": {
+        "groupId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "timestamp" }
+      },
+      "required": ["groupId", "senderId", "senderName", "text", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profiles"
+    },
+    "/ideas/{ideaId}": {
+      "schema": { "$ref": "#/entities/IdeaCard" },
+      "description": "Idea cards posted by DX students"
+    },
+    "/studyGroups/{groupId}": {
+      "schema": { "$ref": "#/entities/StudyGroup" },
+      "description": "Study groups formed around ideas"
+    },
+    "/studyGroups/{groupId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/Message" },
+      "description": "Messages within a study group"
+    }
+  }
+}
