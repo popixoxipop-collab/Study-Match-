@@ -1,0 +1,49 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo "Logging in to Amazon ECR..."
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+      - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/study-match-frontend
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - IMAGE_TAG=${COMMIT_HASH:=latest}
+
+  build:
+    commands:
+      - echo "Build started on `date`"
+      - npm ci
+      - npm run build
+      - echo "Building the Docker image..."
+      - docker build -t $REPOSITORY_URI:$IMAGE_TAG .
+      - docker tag $REPOSITORY_URI:$IMAGE_TAG $REPOSITORY_URI:latest
+
+  post_build:
+    commands:
+      - echo "Build completed on `date`"
+      - echo "Pushing the Docker images..."
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
+      - docker push $REPOSITORY_URI:latest
+      - echo "Image pushed: $REPOSITORY_URI:$IMAGE_TAG"
+      - |
+        echo "Updating k8s deployment image tag..."
+        git config --global user.email "codebuild@aws.com"
+        git config --global user.name "AWS CodeBuild"
+        sed -i "s|image:.*|image: $REPOSITORY_URI:$IMAGE_TAG|g" k8s/deployment.yaml
+        if git diff --quiet k8s/deployment.yaml; then
+          echo "No changes to k8s/deployment.yaml"
+        else
+          git add k8s/deployment.yaml
+          git commit -m "chore(k8s): update frontend image to $IMAGE_TAG [skip ci]"
+          git push https://${GITHUB_TOKEN}@github.com/popixoxipop-collab/Study-Match-.git main
+        fi
+
+artifacts:
+  files:
+    - '**/*'
+    - k8s/**
+
+cache:
+  paths:
+    - '/root/.npm/**/*'
+    - 'node_modules/**/*'
